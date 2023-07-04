@@ -2,7 +2,12 @@ import uvicorn
 import strawberry
 from fastapi import FastAPI
 from strawberry.fastapi import GraphQLRouter
-tasks = []
+from db import DbTools
+
+
+tasks = DbTools('root', 'qwe', 'localhost', 'TEST')
+
+# tasks = []
 
 
 @strawberry.type
@@ -13,23 +18,24 @@ class Task:
 
 def find_index_task(task_id) -> Task:
     for i, elem in enumerate(tasks):
-        if elem.id_ == task_id:
+        if elem.id == task_id:
             return i
     raise KeyError("Task not found")
 
 
 @strawberry.type
 class TaskDb:
-    id_: int
+    id: int
     name: str
     assignee_id: int
 
 
 @strawberry.type
 class Query:
+    # Mysql
     @strawberry.field
     def get_tasks(self) -> list[TaskDb]:
-        return tasks
+        return tasks.get_list_table('Tasks')
 
     @strawberry.field
     def get_task(self, task_id: int) -> TaskDb:
@@ -38,14 +44,14 @@ class Query:
         return task
 
 
+# Mysql
 @strawberry.type
 class Mutation:
     @strawberry.mutation
     def create_task(self, name: str,
-                    assignee_id: int) -> TaskDb:
-        new_id_ = len(tasks) + 1
-        result = TaskDb(name=name, assignee_id=assignee_id, id_=new_id_)
-        tasks.append(result)
+                    assignee_id: int) -> int:
+        task = Task(name=name, assignee_id=assignee_id)
+        result = tasks.add_new_row(task)
         return result
 
     @strawberry.mutation
